@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>Background Video</title>
+
+  <style>
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden !important;
+      background: #000;
+    }
+
+    .bg-wrap {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: #000;
+    }
+
+    /* 16:9 cover sizing (no black bars) */
+    .bg-yt {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100vw, 177.78vh);
+      height: max(56.25vw, 100vh);
+      transform: translate(-50%, -50%) scale(1.12);
+      border: 0;
+      pointer-events: none; /* prevents taps that trigger YouTube overlays */
+    }
+
+    /* Mobile: crop top overlay more aggressively */
+    @media (max-width: 768px) {
+      .bg-yt {
+        top: 34%;
+        transform: translate(-50%, -50%) translateY(-10vh) scale(1.50);
+      }
+    }
+
+    /* iOS viewport stability */
+    @supports (height: 100svh) {
+      .bg-wrap { height: 100svh; }
+      .bg-yt   { height: max(56.25vw, 100svh); }
+    }
+    @supports (height: 100dvh) {
+      .bg-wrap { height: 100dvh; }
+      .bg-yt   { height: max(56.25vw, 100dvh); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-wrap">
+    <iframe
+      id="yt"
+      class="bg-yt"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allow="autoplay; encrypted-media; picture-in-picture"
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <script>
+    // Build the YouTube embed URL with an explicit origin (helps avoid player config issues)
+    const videoId = "sYsGr3S-6-k";
+    const params = new URLSearchParams({
+      autoplay: "1",
+      mute: "1",
+      playsinline: "1",
+      controls: "0",
+      modestbranding: "1",
+      rel: "0",
+      loop: "1",
+      playlist: videoId,
+      iv_load_policy: "3",
+      disablekb: "1",
+      origin: window.location.origin
+    });
+
+    document.getElementById("yt").src =
+      "https://www.youtube.com/embed/" + videoId + "?" + params.toString();
+  </script>
+</body>
+</html>
