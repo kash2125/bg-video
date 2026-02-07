@@ -7,186 +7,42 @@
   <title>Video</title>
 
   <style>
-    :root { --vh: 1px; }
-
     html, body {
-      margin: 0 !important;
-      padding: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      overflow: hidden !important;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden; /* prevents scrollbars */
       background: #000;
     }
 
-    /* Visible hero area */
-    #wrap {
+    /* CLEANED:
+       - selector was wrong (*.kash-iframe -> .kash-iframe)
+       - object-fit line was invalid (and not needed for iframes)
+       - keep your 130vh crop behavior + bottom/right anchoring
+    */
+    .kash-iframe {
       position: fixed;
-      left: 0;
       right: 0;
-      top: 0;
-      height: calc(var(--vh) * 100); /* mobile: full height */
+      bottom: 0;
+      width: 100vw;
+      height: 130vh;
+      border: 0;
+      margin: 0;
       overflow: hidden;
-      background: #000;
-    }
-
-    /* PC: ~90% height, centered */
-    @media (min-width: 900px) {
-      #wrap {
-        top: calc(var(--vh) * 5);
-        height: calc(var(--vh) * 90);
-      }
-    }
-
-    /* The sized “cover” container (JS sets width/height in px) */
-    #shell {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(1.02);
-      transform-origin: center center;
-      pointer-events: none; /* prevents taps/overlays */
-    }
-
-    /* Phone: crop top overlay more */
-    @media (max-width: 768px) {
-      #shell {
-        transform: translate(-50%, -50%) translateY(-12%) scale(1.22);
-      }
-    }
-
-    /* YouTube iframe created by API */
-    #shell iframe {
-      width: 100% !important;
-      height: 100% !important;
-      border: 0 !important;
       display: block;
-      background: #000;
     }
-
-    /* Optional: tiny “loading” shield (hidden once playing) */
-    #loading {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      color: rgba(255,255,255,0.75);
-      font: 14px/1.2 -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif;
-      background: #000;
-    }
-    #loading.hidden { display: none; }
   </style>
 </head>
 
 <body>
-  <div id="wrap">
-    <div id="shell">
-      <div id="player"></div>
-    </div>
-    <div id="loading">Loading…</div>
-  </div>
-
-  <script>
-    const videoId = "sYsGr3S-6-k";
-    const AR = 16 / 9; // aspect ratio
-
-    const wrap = document.getElementById("wrap");
-    const shell = document.getElementById("shell");
-    const loading = document.getElementById("loading");
-
-    let player = null;
-
-    function setVhVar() {
-      // Best fix for iPhone bottom-bar black gaps: use visualViewport when available
-      const vv = window.visualViewport;
-      const h = (vv && vv.height) ? vv.height : window.innerHeight;
-      document.documentElement.style.setProperty("--vh", (h * 0.01) + "px");
-    }
-
-    function sizeCover() {
-      // Measure the actual visible wrapper and size the video to COVER it (no bars)
-      const r = wrap.getBoundingClientRect();
-      const W = r.width;
-      const H = r.height;
-
-      // Start by fitting width, then ensure height covers
-      let w = W;
-      let h = w / AR;
-
-      if (h < H) {
-        h = H;
-        w = h * AR;
-      }
-
-      shell.style.width = w + "px";
-      shell.style.height = h + "px";
-    }
-
-    function relayout() {
-      setVhVar();
-      sizeCover();
-    }
-
-    function requestBestQuality() {
-      // Best-effort only; YouTube may override.
-      try { player.setPlaybackQuality("hd1080"); } catch (e) {}
-      setTimeout(() => { try { player.setPlaybackQuality("hd720"); } catch (e) {} }, 1200);
-    }
-
-    function loadYouTubeAPI() {
-      // Define callback BEFORE loading script (prevents “black screen” race condition)
-      window.onYouTubeIframeAPIReady = function () {
-        player = new YT.Player("player", {
-          videoId,
-          playerVars: {
-            autoplay: 1,
-            mute: 1,
-            playsinline: 1,
-            controls: 0,
-            modestbranding: 1,
-            rel: 0,
-            loop: 1,
-            playlist: videoId,
-            iv_load_policy: 3,
-            disablekb: 1,
-            origin: window.location.origin,
-            vq: "hd1080"
-          },
-          events: {
-            onReady: (e) => {
-              e.target.playVideo();
-              requestBestQuality();
-              setTimeout(requestBestQuality, 2500);
-            },
-            onStateChange: (e) => {
-              // Hide loading once it starts playing or buffering with frames
-              if (e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.BUFFERING) {
-                loading.classList.add("hidden");
-              }
-            }
-          }
-        });
-      };
-
-      const s = document.createElement("script");
-      s.src = "https://www.youtube.com/iframe_api";
-      s.async = true;
-      document.head.appendChild(s);
-    }
-
-    // Layout watchers (fixes iPhone bottom bar changes)
-    window.addEventListener("resize", () => requestAnimationFrame(relayout));
-    window.addEventListener("orientationchange", () => setTimeout(relayout, 250));
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", () => requestAnimationFrame(relayout));
-      window.visualViewport.addEventListener("scroll", () => requestAnimationFrame(relayout));
-    }
-
-    // Init
-    relayout();
-    // Some browsers need a second pass after first paint
-    setTimeout(relayout, 80);
-
-    loadYouTubeAPI();
-  </script>
+  <iframe
+    class="kash-iframe"
+    src="https://www.youtube-nocookie.com/embed/sYsGr3S-6-k?autoplay=1&mute=1&playsinline=1&controls=0&modestbranding=1&loop=1&playlist=sYsGr3S-6-k&rel=0"
+    frameborder="0"
+    allow="autoplay; encrypted-media; picture-in-picture; web-share"
+    referrerpolicy="strict-origin-when-cross-origin"
+    allowfullscreen>
+  </iframe>
 </body>
-</htm
+</html>
