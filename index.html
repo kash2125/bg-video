@@ -8,10 +8,9 @@
 
   <style>
     :root{
-      /* Updated by JS */
-      --vhpx: 1px;
-      --wrap-w: 0px;
-      --wrap-h: 0px;
+      --vhpx: 1px;      /* 1% of viewport height in px (set by JS) */
+      --wrap-w: 100vw;  /* wrapper width in px (set by JS) */
+      --wrap-h: 100vh;  /* wrapper height in px (set by JS) */
     }
 
     html, body {
@@ -23,18 +22,18 @@
       background: #000;
     }
 
-    /* This is the visible "hero" area */
+    /* Visible hero area */
     .bg-wrap {
       position: fixed;
       left: 0;
       right: 0;
       top: 0;
-      height: calc(var(--vhpx) * 100);   /* full height by default (mobile) */
+      height: calc(var(--vhpx) * 100);
       overflow: hidden;
       background: #000;
     }
 
-    /* Desktop: make it ~90% of screen height, centered vertically */
+    /* Desktop: make it ~90% height and centered */
     @media (min-width: 900px) {
       .bg-wrap {
         top: calc(var(--vhpx) * 5);
@@ -42,108 +41,7 @@
       }
     }
 
-    /* Player shell is sized using measured wrap dimensions (no bars) */
+    /* Cover sizing based on measured wrapper (no bars) */
     #playerShell {
       position: absolute;
-      top: 50%;
-      left: 50%;
-
-      /* Cover math using px vars:
-         width  = max(wrapW, wrapH * 16/9)
-         height = max(wrapW * 9/16, wrapH)
-      */
-      width: max(var(--wrap-w), calc(var(--wrap-h) * 16 / 9));
-      height: max(calc(var(--wrap-w) * 9 / 16), var(--wrap-h));
-
-      transform: translate(-50%, -50%) scale(1.06);
-      transform-origin: center center;
-      pointer-events: none;
-    }
-
-    /* iPhone: crop the top overlay more, but keep coverage */
-    @media (max-width: 768px) {
-      #playerShell {
-        transform: translate(-50%, -50%) translateY(-12%) scale(1.22);
-      }
-    }
-
-    /* The iframe created by the YouTube API must fill the shell */
-    #playerShell iframe {
-      width: 100% !important;
-      height: 100% !important;
-      border: 0 !important;
-      display: block;
-    }
-  </style>
-</head>
-
-<body>
-  <div class="bg-wrap" id="wrap">
-    <div id="playerShell">
-      <div id="player"></div>
-    </div>
-  </div>
-
-  <script src="https://www.youtube.com/iframe_api"></script>
-
-  <script>
-    const videoId = "sYsGr3S-6-k";
-    let player;
-
-    function setViewportVars() {
-      // Use visualViewport when available (best on iPhone to avoid bottom bars)
-      const h = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
-      document.documentElement.style.setProperty("--vhpx", (h * 0.01) + "px");
-
-      // Measure the actual visible wrapper and size the video to cover it
-      const wrap = document.getElementById("wrap");
-      const r = wrap.getBoundingClientRect();
-      document.documentElement.style.setProperty("--wrap-w", r.width + "px");
-      document.documentElement.style.setProperty("--wrap-h", r.height + "px");
-    }
-
-    function requestBestQuality() {
-      // Best-effort (YouTube can still override)
-      try { player.setPlaybackQuality("hd1080"); } catch (e) {}
-      setTimeout(() => { try { player.setPlaybackQuality("hd720"); } catch (e) {} }, 1200);
-    }
-
-    // Keep vars updated (rotation/address bar show/hide)
-    window.addEventListener("resize", () => requestAnimationFrame(setViewportVars));
-    window.addEventListener("orientationchange", () => setTimeout(setViewportVars, 250));
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", () => requestAnimationFrame(setViewportVars));
-      window.visualViewport.addEventListener("scroll", () => requestAnimationFrame(setViewportVars));
-    }
-
-    setViewportVars();
-
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player("player", {
-        videoId,
-        playerVars: {
-          autoplay: 1,
-          mute: 1,
-          playsinline: 1,
-          controls: 0,
-          modestbranding: 1,
-          rel: 0,
-          loop: 1,
-          playlist: videoId,
-          iv_load_policy: 3,
-          disablekb: 1,
-          origin: window.location.origin,
-          vq: "hd1080"
-        },
-        events: {
-          onReady: (e) => {
-            e.target.playVideo();
-            requestBestQuality();
-            setTimeout(requestBestQuality, 2500);
-          }
-        }
-      });
-    }
-  </script>
-</body>
-</html>
+      top
