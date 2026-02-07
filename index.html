@@ -7,12 +7,6 @@
   <title>BG Video</title>
 
   <style>
-    :root{
-      --vhpx: 1px;      /* 1% of viewport height in px (set by JS) */
-      --wrap-w: 100vw;  /* wrapper width in px (set by JS) */
-      --wrap-h: 100vh;  /* wrapper height in px (set by JS) */
-    }
-
     html, body {
       margin: 0 !important;
       padding: 0 !important;
@@ -22,26 +16,104 @@
       background: #000;
     }
 
-    /* Visible hero area */
     .bg-wrap {
       position: fixed;
-      left: 0;
-      right: 0;
-      top: 0;
-      height: calc(var(--vhpx) * 100);
+      inset: 0;
       overflow: hidden;
       background: #000;
     }
 
-    /* Desktop: make it ~90% height and centered */
-    @media (min-width: 900px) {
-      .bg-wrap {
-        top: calc(var(--vhpx) * 5);
-        height: calc(var(--vhpx) * 90);
+    /* 16:9 cover sizing: no black bars */
+    #playerShell {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100vw, 177.78vh);
+      height: max(56.25vw, 100vh);
+      transform: translate(-50%, -50%) scale(1.12);
+      border: 0;
+      pointer-events: none; /* prevents taps / overlays */
+    }
+
+    /* Make the generated iframe fill our shell */
+    #playerShell iframe {
+      width: 100% !important;
+      height: 100% !important;
+      border: 0 !important;
+    }
+
+    /* Mobile: crop more aggressively (hide channel overlay) */
+    @media (max-width: 768px) {
+      #playerShell {
+        top: 34%;
+        transform: translate(-50%, -50%) translateY(-10vh) scale(1.50);
       }
     }
 
-    /* Cover sizing based on measured wrapper (no bars) */
-    #playerShell {
-      position: absolute;
-      top
+    /* iOS viewport stability */
+    @supports (height: 100svh) {
+      .bg-wrap { height: 100svh; }
+      #playerShell { height: max(56.25vw, 100svh); }
+    }
+    @supports (height: 100dvh) {
+      .bg-wrap { height: 100dvh; }
+      #playerShell { height: max(56.25vw, 100dvh); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-wrap">
+    <div id="playerShell">
+      <div id="player"></div>
+    </div>
+  </div>
+
+  <!-- YouTube IFrame Player API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <script>
+    const videoId = "sYsGr3S-6-k";
+    let player;
+
+    function requestBestQuality() {
+      // YouTube treats this as a "suggestion" (not guaranteed), but it often helps on iPhone.
+      try { player.setPlaybackQuality("hd1080"); } catch (e) {}
+      // If 1080 isn't available on that device/session, 720 is the next best.
+      setTimeout(() => { try { player.setPlaybackQuality("hd720"); } catch (e) {} }, 1200);
+    }
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player("player", {
+        videoId,
+        playerVars: {
+          autoplay: 1,
+          mute: 1,
+          playsinline: 1,
+          controls: 0,
+          modestbranding: 1,
+          rel: 0,
+          loop: 1,
+          playlist: videoId,
+          iv_load_policy: 3,
+          disablekb: 1,
+
+          // Helps avoid player config issues in embedded contexts
+          origin: window.location.origin,
+
+          // Unofficial hint that sometimes helps start higher-res (not guaranteed)
+          vq: "hd1080"
+        },
+        events: {
+          onReady: (e) => {
+            e.target.playVideo();
+            requestBestQuality();
+            // Another retry once the stream has actually started:
+            setTimeout(requestBestQuality, 2500);
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
