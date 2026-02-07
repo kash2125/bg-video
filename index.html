@@ -7,6 +7,13 @@
   <title>BG Video</title>
 
   <style>
+    :root{
+      /* Updated by JS */
+      --vhpx: 1px;
+      --wrap-w: 0px;
+      --wrap-h: 0px;
+    }
+
     html, body {
       margin: 0 !important;
       padding: 0 !important;
@@ -16,72 +23,100 @@
       background: #000;
     }
 
+    /* This is the visible "hero" area */
     .bg-wrap {
       position: fixed;
-      inset: 0;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: calc(var(--vhpx) * 100);   /* full height by default (mobile) */
       overflow: hidden;
       background: #000;
     }
 
-    /* 16:9 cover sizing: no black bars */
+    /* Desktop: make it ~90% of screen height, centered vertically */
+    @media (min-width: 900px) {
+      .bg-wrap {
+        top: calc(var(--vhpx) * 5);
+        height: calc(var(--vhpx) * 90);
+      }
+    }
+
+    /* Player shell is sized using measured wrap dimensions (no bars) */
     #playerShell {
       position: absolute;
       top: 50%;
       left: 50%;
-      width: max(100vw, 177.78vh);
-      height: max(56.25vw, 100vh);
-      transform: translate(-50%, -50%) scale(1.12);
-      border: 0;
-      pointer-events: none; /* prevents taps / overlays */
+
+      /* Cover math using px vars:
+         width  = max(wrapW, wrapH * 16/9)
+         height = max(wrapW * 9/16, wrapH)
+      */
+      width: max(var(--wrap-w), calc(var(--wrap-h) * 16 / 9));
+      height: max(calc(var(--wrap-w) * 9 / 16), var(--wrap-h));
+
+      transform: translate(-50%, -50%) scale(1.06);
+      transform-origin: center center;
+      pointer-events: none;
     }
 
-    /* Make the generated iframe fill our shell */
+    /* iPhone: crop the top overlay more, but keep coverage */
+    @media (max-width: 768px) {
+      #playerShell {
+        transform: translate(-50%, -50%) translateY(-12%) scale(1.22);
+      }
+    }
+
+    /* The iframe created by the YouTube API must fill the shell */
     #playerShell iframe {
       width: 100% !important;
       height: 100% !important;
       border: 0 !important;
-    }
-
-    /* Mobile: crop more aggressively (hide channel overlay) */
-    @media (max-width: 768px) {
-      #playerShell {
-        top: 34%;
-        transform: translate(-50%, -50%) translateY(-10vh) scale(1.50);
-      }
-    }
-
-    /* iOS viewport stability */
-    @supports (height: 100svh) {
-      .bg-wrap { height: 100svh; }
-      #playerShell { height: max(56.25vw, 100svh); }
-    }
-    @supports (height: 100dvh) {
-      .bg-wrap { height: 100dvh; }
-      #playerShell { height: max(56.25vw, 100dvh); }
+      display: block;
     }
   </style>
 </head>
 
 <body>
-  <div class="bg-wrap">
+  <div class="bg-wrap" id="wrap">
     <div id="playerShell">
       <div id="player"></div>
     </div>
   </div>
 
-  <!-- YouTube IFrame Player API -->
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <script>
     const videoId = "sYsGr3S-6-k";
     let player;
 
+    function setViewportVars() {
+      // Use visualViewport when available (best on iPhone to avoid bottom bars)
+      const h = (window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight;
+      document.documentElement.style.setProperty("--vhpx", (h * 0.01) + "px");
+
+      // Measure the actual visible wrapper and size the video to cover it
+      const wrap = document.getElementById("wrap");
+      const r = wrap.getBoundingClientRect();
+      document.documentElement.style.setProperty("--wrap-w", r.width + "px");
+      document.documentElement.style.setProperty("--wrap-h", r.height + "px");
+    }
+
     function requestBestQuality() {
-      // YouTube treats this as a "suggestion" (not guaranteed), but it often helps on iPhone.
+      // Best-effort (YouTube can still override)
       try { player.setPlaybackQuality("hd1080"); } catch (e) {}
-      // If 1080 isn't available on that device/session, 720 is the next best.
       setTimeout(() => { try { player.setPlaybackQuality("hd720"); } catch (e) {} }, 1200);
     }
+
+    // Keep vars updated (rotation/address bar show/hide)
+    window.addEventListener("resize", () => requestAnimationFrame(setViewportVars));
+    window.addEventListener("orientationchange", () => setTimeout(setViewportVars, 250));
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", () => requestAnimationFrame(setViewportVars));
+      window.visualViewport.addEventListener("scroll", () => requestAnimationFrame(setViewportVars));
+    }
+
+    setViewportVars();
 
     function onYouTubeIframeAPIReady() {
       player = new YT.Player("player", {
@@ -97,18 +132,13 @@
           playlist: videoId,
           iv_load_policy: 3,
           disablekb: 1,
-
-          // Helps avoid player config issues in embedded contexts
           origin: window.location.origin,
-
-          // Unofficial hint that sometimes helps start higher-res (not guaranteed)
           vq: "hd1080"
         },
         events: {
           onReady: (e) => {
             e.target.playVideo();
             requestBestQuality();
-            // Another retry once the stream has actually started:
             setTimeout(requestBestQuality, 2500);
           }
         }
